@@ -16,7 +16,7 @@ def make_data_path_list(phase="train",rate=0.8):
     #去噪数据集
     root_path='dataset/'+phase+'/'
     #图片的路径
-    files_name=os.listdir(root_path+phase+'_0')
+    files_name=os.listdir(root_path+phase+'_A')
 
     if phase=="train":
         random.shuffle(files_name)  #打乱训练数据
@@ -29,20 +29,19 @@ def make_data_path_list(phase="train",rate=0.8):
     #取出  噪声图像/gt
     if phase=="train":
         for name in files_name:
-            path_a.append(root_path+phase+'_a/'+name)
+            path_a.append(root_path+phase+'_A/'+name)
             #path_c.append(root_path+phase+'_2/'+name.split("_")[0]+"_"+name.split("_")[1]+".png")
             #path_c.append(root_path+phase+'_2/'+name.split("_")[0]+".png")
             path_c.append(root_path + phase + '_c/' + name)
     elif phase=='test':
         for name in files_name:
-            path_a.append(root_path+phase+'_a/'+name)
+            path_a.append(root_path+phase+'_A/'+name)
             path_c.append(root_path + phase + '_c/' + name)
     num=len(path_a)
-    print("make_data_path_list里面的num(path_a中Len)：{}".format(num))
 
     #分出训练集和验证集
     if phase=="train":
-        path_a,path_a_val=path_a[:int(num*rate)],path_a[int(num*rate):]#前80%训练。后20%验证
+        path_a,path_a_val=path_a[:int(num*rate)],path_a[int(num*rate):]#前80%训练。后20%训练
         path_c,path_c_val=path_c[:int(num*rate)],path_c[int(num*rate):]
 
         path_list={'path_A':path_a,'path_C':path_c,}
@@ -102,22 +101,19 @@ class ImageTransform:
     def __call__(self, phase, img):
         return self.data_transform[phase](img)
 
-#加载图片，接受三个参数，’img_list'.'img_transform','phase'
+#加载图片
 class ImageDataset(data.Dataset):
     def __init__(self,img_list,img_transform,phase):
         self.img_list=img_list
         self.img_transform=img_transform
         self.phase=phase
 
-    #返回数据集的大小
     def __len__(self):
         return len(self.img_list["path_A"])
-    #返回一个元组‘（img,gt）’
     def __getitem__(self, index):
         img=Image.open(self.img_list["path_A"][index]).convert("RGB")
         #gt_shadow=Image.open(self.img_list["path_B"](index))
         gt=Image.open(self.img_list["path_C"][index]).convert("RGB")
-        #如果phase=train。还要进行数据增强转换
         img,gt=self.img_transform(self.phase,[img,gt])
 
         return img,gt

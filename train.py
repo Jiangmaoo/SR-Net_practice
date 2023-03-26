@@ -36,7 +36,7 @@ def get_parser():
         add_help=True   #为解析器添加一个-h/--help选项
     )
     #type-命令行参数应当被转换的类型；default-当参数未在命令行出现使用的值；help-一个此选项作用的简单描述
-    parser.add_argument("-e","--epoch",type=int,default=1000,help="Numbei of epochs")
+    parser.add_argument("-e","--epoch",type=int,default=1000,help="Number of epochs")
     parser.add_argument("-b","--batch_size",type=int,default=2,help="Batch size")
     parser.add_argument("-l","--load",type=str,default=None,help="The number of chechpoints")
     parser.add_argument("-hor","--hold_out_ratio",type=float,default=0.993,help="Training-Validation ratio")
@@ -124,14 +124,14 @@ def evaluate(g1,dataset,device,filename):
         ),
         nrow=9
     )
-    save_image(grid_rec,filename+"denosing_removal_img.jpg")
+    save_image(grid_rec,filename+"shadow_removal_img.jpg")
     save_image(grid_removal,filename+"_removal_separation.jpg")
 
 def train_model(g1,d1,dataloader,val_dataset,num_epochs,parser,save_model_name="model"):
     #检查项目路径
     check_dir()
 
-    device="cuda:0" if torch.cuda.if_available() else "cpu"
+    device="cuda:0" if torch.cuda.is_available() else "cpu"
 
     f_tensor=torch.cuda.FloatTensor if torch.cuda.is_available() else torch.FloatTensor
 
@@ -158,8 +158,8 @@ def train_model(g1,d1,dataloader,val_dataset,num_epochs,parser,save_model_name="
     optimizer_d=torch.optim.Adam([{"params":d1.parameters()}],lr=lr,betas=(beta1,beta2))
 
     #损失
-    #criterion_gan=nn.BCEWithLogitsLoss().to(device)   #sigmoid+BCE
-    criterion_gan=nn.BCELoss().to(device)
+    criterion_gan=nn.BCEWithLogitsLoss().to(device)   #sigmoid+BCE
+    #criterion_gan=nn.BCELoss().to(device)
     criterion_l1=nn.L1Loss().to(device)
 
     mini_batch_size=parser.batch_size
@@ -186,14 +186,14 @@ def train_model(g1,d1,dataloader,val_dataset,num_epochs,parser,save_model_name="
         epoch_g_loss=0.0
         epoch_d_loss=0.0
         epoch_single_g_loss=0.0
-        epoch_general_loss=0.
+        epoch_tf_loss=0.0
 
         print('--------------')
         print('Epoch  {}/{}'.format(epoch,num_epochs))
         print('(train)')
 
         data_len=len(dataloader)
-        #print("data_len={}".format(data_len))   len=397
+        print("data_len={}".format(data_len))
 
         for images,gt in tqdm(dataloader):
             #默认加载两张图片，batch_size==1时可能会出现错误
@@ -258,35 +258,36 @@ def train_model(g1,d1,dataloader,val_dataset,num_epochs,parser,save_model_name="
 
             epoch_g_loss+=g_loss.item()
             epoch_single_g_loss+=g_l_c_gan1.item()
+            epoch_tf_loss+=g_l_data2.item()
 
         t_epoch_finish=time.time()
 
         print("------------")
-        print("epoch {}  || Epoch_D_Loss:{:.4f}  || Epoch_G_Loss:{:.4f} ||  Epoch_Single_G_Loss:{:.4f}".format(
+        print("epoch {}  || Epoch_D_Loss:{:.4f}  || Epoch_G_Loss:{:.4f} ||  Epoch_Single_G_Loss:{:.4f}  ||  Epoch_tf_Loss:{:.4f}".format(
             epoch,
             epoch_d_loss/(lambda_dict["lambda2"]*2*data_len),
             epoch_g_loss/data_len,
-            epoch_single_g_loss/data_len
+            epoch_single_g_loss/data_len,
+            epoch_tf_loss/data_len
         ))
         print("timer:{:.4f} sec.".format(t_epoch_finish-t_epoch_start))
 
-        d_losses+=[epoch_d_loss/(lambda_dict["lambda2"]*2*data_len)]
-        g_losses+=[epoch_g_loss/data_len]
-        general_losses+=[epoch_general_loss/data_len]
+        #d_losses+=[epoch_d_loss/(lambda_dict["lambda2"]*2*data_len)]
+        #g_losses+=[epoch_g_loss/data_len]
         scheduler.step(epoch_g_loss/data_len)
 
         t_epoch_start=time.time()
 
         #输出损失日志
-        plot_log(
-            {
-                "G":g_losses,
-                "D":d_losses,
-                "SG":single_gan_losses,
-                "GENERAL":general_losses
-            },
-            save_model_name+str(epoch)
-        )
+        #plot_log(
+        #    {
+        #        "G":g_losses,
+        #        "D":d_losses,
+        #        "SG":single_gan_losses,
+        #        "GENERAL":general_losses
+        #    },
+        #    save_model_name+str(epoch)
+        #)
 
         #采用间隔几个epoch保存模型
         if epoch%10==0:
@@ -315,7 +316,9 @@ def train(parser):
 
     #取出训练集和验证集路径
     #train_img_list,val_img_list=make_data_path_list(phase='train',rate=parser.hold_out_ratio)[:20]
-    train_img_list, val_img_list = make_data_path_list(phase='train')[:20]
+    train_img_list, val_img_list = make_data_path_list(phase='train',rate=0.95)[:20]
+    #print(len(train_img_list["path_A"]))
+    #print(len(val_img_list['path_A']))
     print("train_dataset:{}".format(len(train_img_list["path_A"])))
     print("val_dataset:{}".format(len(val_img_list['path_A'])))
 
@@ -339,9 +342,7 @@ def train(parser):
                    val_dataset=val_dataset,
                    num_epochs=num_epochs,
                    parser=parser,
-                   save_model_name="S-R-Net"
-                   # save_model_name="S_R_Net"
-    )
+                   save_model_name="S-R-Net")
 
 if __name__=="__main__":
     m_parser=get_parser().parse_args()

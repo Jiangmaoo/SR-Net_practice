@@ -31,7 +31,7 @@ class Compose(object):
 #格式转换
 class ToTensor(object):
     def __call__(self,img):
-        return F.to_Tensor(img[0]),F.to_tensor(img[1])
+        return F.to_tensor(img[0]),F.to_tensor(img[1])
 
     def __repr__(self):
         return self.__class__.__name__+"()"
@@ -108,7 +108,7 @@ class CenterCrop(torch.nn.Module):
 class RandomCrop(torch.nn.Module):
     @staticmethod
     def get_params(img:Tensor,output_size:Tuple[int,int])->Tuple[int,int,int,int]:
-        w,h=img.resize
+        w,h=img.size
         th,tw=output_size
 
         if w==tw and h==th:

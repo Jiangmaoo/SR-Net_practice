@@ -67,7 +67,7 @@ class CvTi(nn.Module):
 
         #初始化逆卷积
         self.conv=nn.ConvTranspose2d(in_channels=in_channels,out_channels=out_channels,kernel_size=kernel_size,
-                                     tride=stride,padding=padding)
+                                     stride=stride,padding=padding)
         #初始化逆卷积权重
         self.conv.apply(weights_init("gaussian"))
 
@@ -209,7 +209,6 @@ class SRNet(nn.Module):
         self.general_encoder=Encoder(input_channels)
 
         #阴影-共同特征解码器Js/无阴影-共同特征解码器Jsf
-        #一个解码器
         self.joint_decoder=JointDecoder(output_channels)
 
         #阴影移除联合解码器Jssf
@@ -256,12 +255,9 @@ class SRNet(nn.Module):
                 self.placeholder[key]=torch.zeros(feature_dic1[key].shape,requires_grad=False).to(
                     torch.device(feature_dic1["x1"].device)
                 )
-        # rec_by_tg1=self.joint_decoderT(self.placeholder,general_dic1)
-        # gan里面的解码器
-        # rec_by_td1=self.joint_decoderT(feature_dic1,self.placeholder)
-        rec_by_tg1 = self.joint_decoder(self.placeholder, general_dic1)
-        #重建里面那个解码器
-        rec_by_td1 = self.joint_decoder(feature_dic1, self.placeholder)
+        rec_by_tg1=self.joint_decoder(self.placeholder,general_dic1)
+
+        rec_by_td1=self.joint_decoder(feature_dic1,self.placeholder)
 
         reconstruct_tf=self.joint_decoderT(feature_dic1,general_dic1)
 
